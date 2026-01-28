@@ -21,14 +21,14 @@ echo "=== WSL Dev Environment Setup ==="
 echo ""
 
 # --- Create projects directory ---
-echo "[1/5] Creating projects directory..."
+echo "[1/8] Creating projects directory..."
 mkdir -p ~/projects
 cd ~/projects
 echo "Created ~/projects"
 
 # --- Git Config ---
 echo ""
-echo "[2/6] Configuring Git..."
+echo "[2/8] Configuring Git..."
 git config --global user.name "mdc159"
 git config --global user.email "mike5150@protonmail.ch"
 git config --global init.defaultBranch main
@@ -37,7 +37,7 @@ echo "Git configured: $(git config --global user.name) <$(git config --global us
 
 # --- SSH Setup for GitHub ---
 echo ""
-echo "[3/6] Setting up SSH for GitHub..."
+echo "[3/8] Setting up SSH for GitHub..."
 
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
@@ -74,7 +74,7 @@ echo "SSH setup complete."
 
 # --- Node.js 22 ---
 echo ""
-echo "[4/6] Installing Node.js 22..."
+echo "[4/8] Installing Node.js 22..."
 
 if ! command -v node &> /dev/null || [[ $(node -v | cut -d'.' -f1 | tr -d 'v') -lt 22 ]]; then
     curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
@@ -86,7 +86,7 @@ fi
 
 # --- AWS CLI ---
 echo ""
-echo "[5/6] Setting up AWS CLI..."
+echo "[5/8] Setting up AWS CLI..."
 
 if ! command -v aws &> /dev/null; then
     echo "Installing AWS CLI..."
@@ -115,7 +115,7 @@ fi
 
 # --- Playwright MCP for Claude Code ---
 echo ""
-echo "[6/6] Installing Playwright MCP (browser automation)..."
+echo "[6/8] Installing Playwright MCP (browser automation)..."
 
 if ! command -v npx &> /dev/null; then
     echo "npx not found, skipping Playwright. Install Node.js first."
@@ -126,12 +126,46 @@ else
     echo "Playwright setup complete."
 fi
 
-# --- Configure Claude Code MCP ---
-mkdir -p ~/.claude
+# --- Clone Essential Repos ---
+echo ""
+echo "[7/8] Cloning essential repos..."
 
-if [ ! -f ~/.claude/settings.json ]; then
-    cat > ~/.claude/settings.json << 'EOF'
+cd ~/projects
+
+if [ ! -d "claude-code-templates" ]; then
+    git clone git@github.com:mdc159/claude-code-templates.git
+    echo "Cloned claude-code-templates"
+else
+    echo "claude-code-templates already exists"
+fi
+
+if [ ! -d "claude-memory" ]; then
+    git clone git@github.com:mdc159/claude-memory.git
+    echo "Cloned claude-memory"
+else
+    echo "claude-memory already exists"
+fi
+
+# --- Configure Claude Code ---
+echo ""
+echo "[8/8] Configuring Claude Code..."
+
+mkdir -p ~/.claude/commands
+
+# Global settings with permissions and Playwright MCP
+cat > ~/.claude/settings.json << 'SETTINGS'
 {
+  "permissions": {
+    "allow": [
+      "Bash(npm*)",
+      "Bash(node*)",
+      "Bash(git*)",
+      "Bash(aws*)",
+      "Bash(docker*)",
+      "Bash(ssh*)",
+      "Bash(pnpm*)"
+    ]
+  },
   "mcpServers": {
     "playwright": {
       "command": "npx",
@@ -139,9 +173,44 @@ if [ ! -f ~/.claude/settings.json ]; then
     }
   }
 }
-EOF
-    echo "Created ~/.claude/settings.json with Playwright MCP"
+SETTINGS
+echo "Created ~/.claude/settings.json"
+
+# Global CLAUDE.md with memory references
+cat > ~/.claude/CLAUDE.md << 'CLAUDEMD'
+# Global Claude Instructions
+
+## Memory System
+At the start of each session, read the memory files if they exist:
+- `~/projects/claude-memory/MEMORY.md` - Long-term facts and preferences
+- `~/projects/claude-memory/sessions/` - Recent session notes
+- `~/projects/claude-memory/projects/` - Project-specific context
+
+When the user says "remember X" or asks me to note something for later:
+1. Append to the appropriate memory file
+2. Commit changes to git if significant
+
+## Environment
+- User: Mike (mdc159)
+- Platform: WSL2 Ubuntu on Windows
+- Projects: ~/projects/
+- AWS Region: us-east-2
+
+## Preferences
+- Direct communication, minimal fluff
+- Prefer scripts for reproducible setup
+- "Think BIG" - don't default to minimal solutions
+- Push back with better ideas when appropriate
+CLAUDEMD
+echo "Created ~/.claude/CLAUDE.md"
+
+# Symlink git commands from templates
+if [ -d ~/projects/claude-code-templates/cli-tool/components/commands/git ]; then
+    ln -sf ~/projects/claude-code-templates/cli-tool/components/commands/git/*.md ~/.claude/commands/ 2>/dev/null
+    echo "Linked git slash commands (/feature, /finish, /release, /hotfix)"
 fi
+
+echo "Claude Code configured."
 
 # --- Summary ---
 echo ""
@@ -156,11 +225,17 @@ echo "  - Node.js $(node -v 2>/dev/null || echo 'pending')"
 echo "  - AWS CLI"
 echo "  - Playwright MCP for Claude Code"
 echo ""
-echo "Directory: ~/projects"
+echo "Repos cloned:"
+echo "  - ~/projects/claude-code-templates"
+echo "  - ~/projects/claude-memory"
+echo ""
+echo "Claude Code:"
+echo "  - ~/.claude/settings.json (global config)"
+echo "  - ~/.claude/CLAUDE.md (global instructions + memory)"
+echo "  - ~/.claude/commands/ (git slash commands)"
 echo ""
 echo "Next steps:"
 echo "  1. source ~/.bashrc"
 echo "  2. ssh -T git@github.com  (verify GitHub)"
 echo "  3. aws sts get-caller-identity  (verify AWS)"
-echo "  4. Clone your repos into ~/projects/"
 echo ""
