@@ -5,7 +5,11 @@
 # Purpose: Restore base dev environment after Windows reimage
 # This sets up the essentials to get back to coding quickly.
 #
-# Usage:
+# Quick install from fresh WSL (copy/paste this one-liner):
+#   curl -fsSL https://raw.githubusercontent.com/mdc159/claude-code-templates/main/scripts/wsl-setup.sh | bash
+#
+# Or download and run manually:
+#   curl -fsSL https://raw.githubusercontent.com/mdc159/claude-code-templates/main/scripts/wsl-setup.sh -o wsl-setup.sh
 #   chmod +x wsl-setup.sh
 #   ./wsl-setup.sh
 #
